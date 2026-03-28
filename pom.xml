@@ -8,11 +8,13 @@
 		<version>4.0.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.waf</groupId>
-	<artifactId>waf</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>waf</name>
-	<description>Demo project for Spring Boot</description>
+	<groupId>com.github.RiddhikaR</groupId>
+<artifactId>waf</artifactId>
+<version>1.0.0</version>
+<packaging>jar</packaging>
+<name>waf</name>
+<description>WAF dependency for Spring Boot</description>
+
 	<url/>
 	<licenses>
 		<license/>
