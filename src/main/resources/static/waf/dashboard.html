@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>WAF Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f3ef;
+            --bg2: #eceae4;
+            --bg3: #e2dfd8;
+            --border: #ccc9c0;
+            --text: #1a1917;
+            --muted: #888580;
+            --red: #c0392b;
+            --red-bg: #fdf0ee;
+            --yellow: #b7680a;
+            --yellow-bg: #fdf6e3;
+            --green: #1e7a4a;
+            --green-bg: #edf7f2;
+            --blue: #1a5fa8;
+            --blue-bg: #eef4fd;
+            --purple: #6b3fa0;
+            --purple-bg: #f4eeff;
+        }
+        [data-theme="dark"] {
+            --bg: #0a0a0a;
+            --bg2: #111111;
+            --bg3: #1a1a1a;
+            --border: #242424;
+            --text: #f0ede8;
+            --muted: #484848;
+            --red: #ff4444;
+            --red-bg: #1a0a0a;
+            --yellow: #ffaa00;
+            --yellow-bg: #1a1200;
+            --green: #00cc66;
+            --green-bg: #001a0d;
+            --blue: #4488ff;
+            --blue-bg: #081020;
+            --purple: #aa66ff;
+            --purple-bg: #120a1a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 12px; }
+        body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 1000; }
+
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; border-bottom: 1px solid var(--border); background: var(--bg2); position: sticky; top: 0; z-index: 100; }
+        .logo { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .logo span { color: var(--muted); font-weight: 400; }
+        .topbar-right { display: flex; align-items: center; gap: 14px; }
+        .live-dot { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); }
+        .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
+        .btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 11px; transition: all 0.15s; }
+        .btn:hover { border-color: var(--text); color: var(--text); }
+
+        .main { padding: 24px 28px; }
+
+        /* THREAT BANNER */
+        .threat-banner { display: flex; align-items: center; justify-content: space-between; padding: 22px 28px; margin-bottom: 20px; border: 1px solid var(--border); background: var(--bg2); position: relative; overflow: hidden; }
+        .threat-banner::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--threat-color, var(--green)); transition: background 0.5s; }
+        .threat-left { display: flex; align-items: center; gap: 28px; }
+        .threat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+        .threat-level { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: var(--threat-color, var(--green)); transition: color 0.5s; letter-spacing: 3px; }
+        .threat-segs { display: flex; align-items: center; gap: 5px; }
+        .threat-seg { width: 36px; height: 6px; background: var(--border); transition: background 0.4s; }
+        .threat-desc { font-size: 11px; color: var(--muted); max-width: 320px; line-height: 1.6; }
+        .threat-time { font-size: 10px; color: var(--muted); text-align: right; }
+
+        /* STATS */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat { background: var(--bg2); border: 1px solid var(--border); padding: 26px 24px 22px; position: relative; overflow: hidden; }
+        .stat::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
+        .stat.s-blocked::after { background: var(--red); }
+        .stat.s-unique::after { background: var(--purple); }
+        .stat.s-bans::after { background: var(--yellow); }
+        .stat.s-last::after { background: var(--blue); }
+        .stat-icon { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; }
+        .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .s-blocked .stat-dot { background: var(--red); }
+        .s-unique .stat-dot { background: var(--purple); }
+        .s-bans .stat-dot { background: var(--yellow); }
+        .s-last .stat-dot { background: var(--blue); }
+        .stat-value { font-family: 'Syne', sans-serif; font-size: 56px; font-weight: 800; line-height: 1; margin-bottom: 10px; }
+        .stat-value.red { color: var(--red); }
+        .stat-value.yellow { color: var(--yellow); }
+        .stat-value.blue { color: var(--blue); }
+        .stat-value.purple { color: var(--purple); }
+        .stat-sub { font-size: 10px; color: var(--muted); }
+
+        /* FILTER */
+        .filter-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+        .filter-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 4px; }
+        .filter-btn { padding: 4px 10px; border: 1px solid var(--border); background: none; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+        .filter-btn:hover { color: var(--text); border-color: var(--text); }
+        .filter-btn.active-all { border-color: var(--text); color: var(--text); background: var(--bg3); }
+        .filter-btn.active-sqli,.filter-btn.active-xss { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+        .filter-btn.active-path-traversal,.filter-btn.active-os-injection,.filter-btn.active-large-payload { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-bg); }
+        .filter-btn.active-crlf { border-color: var(--purple); color: var(--purple); background: var(--purple-bg); }
+        .filter-btn.active-rate-limit,.filter-btn.active-replay { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+        .filter-btn.active-banned-ip { border-color: var(--muted); color: var(--muted); background: var(--bg3); }
+
+        /* GRID */
+        .grid { display: grid; grid-template-columns: 1fr 360px; gap: 12px; }
+        .box { border: 1px solid var(--border); background: var(--bg2); display: flex; flex-direction: column; }
+        .box-header { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg3); flex-shrink: 0; }
+        .box-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+        .box-count { font-size: 10px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); padding: 1px 7px; }
+        .table-wrap { overflow-y: auto; max-height: 420px; flex: 1; }
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg3); z-index: 10; }
+        td { padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg3); }
+        td.ip { font-size: 11px; }
+        td.path { color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        td.when { color: var(--muted); white-space: nowrap; }
+        td.count { text-align: right; }
+        .count-badge { display: inline-block; font-size: 10px; padding: 2px 7px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); min-width: 30px; text-align: center; }
+        .count-badge.hot { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+        .count-badge.warm { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-bg); }
+        .tag { font-size: 10px; padding: 2px 7px; border: 1px solid; font-family: 'JetBrains Mono', monospace; white-space: nowrap; display: inline-block; }
+        .tag-red { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+        .tag-yellow { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-bg); }
+        .tag-blue { color: var(--blue); border-color: var(--blue); background: var(--blue-bg); }
+        .tag-purple { color: var(--purple); border-color: var(--purple); background: var(--purple-bg); }
+        .tag-muted { color: var(--muted); border-color: var(--border); background: var(--bg3); }
+        .unban { background: none; border: 1px solid var(--border); color: var(--muted); padding: 2px 8px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: all 0.15s; }
+        .unban:hover { border-color: var(--red); color: var(--red); }
+        .empty { padding: 32px 16px; color: var(--muted); text-align: center; font-size: 11px; }
+        .ttl-text { color: var(--red); }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="logo">dashboard</div>
+    <div class="topbar-right">
+        <span class="live-dot">live</span>
+        <button class="btn" onclick="clearFilter()">clear filter</button>
+        <button class="btn" onclick="toggleTheme()">toggle theme</button>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="threat-banner" id="threat-banner">
+        <div class="threat-left">
+            <div>
+                <div class="threat-label">threat level</div>
+                <div class="threat-level" id="threat-level-text">—</div>
+            </div>
+            <div class="threat-segs">
+                <div class="threat-seg" id="seg-1"></div>
+                <div class="threat-seg" id="seg-2"></div>
+                <div class="threat-seg" id="seg-3"></div>
+                <div class="threat-seg" id="seg-4"></div>
+            </div>
+        </div>
+        <div class="threat-desc" id="threat-desc">collecting data...</div>
+        <div class="threat-time" id="threat-time">—</div>
+    </div>
+
+    <div class="stats">
+        <div class="stat s-blocked">
+            <div class="stat-icon">recent blocked <div class="stat-dot"></div></div>
+            <div class="stat-value red" id="total-blocked">—</div>
+            <div class="stat-sub">unique attack groups in window</div>
+        </div>
+        <div class="stat s-unique">
+            <div class="stat-icon">unique ips <div class="stat-dot"></div></div>
+            <div class="stat-value purple" id="unique-ips">—</div>
+            <div class="stat-sub">distinct sources attacking</div>
+        </div>
+        <div class="stat s-bans">
+            <div class="stat-icon">active bans <div class="stat-dot"></div></div>
+            <div class="stat-value yellow" id="active-bans">—</div>
+            <div class="stat-sub">ips currently banned</div>
+        </div>
+        <div class="stat s-last">
+            <div class="stat-icon">last attack <div class="stat-dot"></div></div>
+            <div class="stat-value blue" id="last-attack" style="font-size:26px;padding-top:12px">—</div>
+            <div class="stat-sub">most recent block</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <span class="filter-label">filter:</span>
+        <button class="filter-btn active-all" data-filter="all" onclick="setFilter('all')">all</button>
+        <button class="filter-btn" data-filter="sqli" onclick="setFilter('sqli')">sqli</button>
+        <button class="filter-btn" data-filter="xss" onclick="setFilter('xss')">xss</button>
+        <button class="filter-btn" data-filter="path-traversal" onclick="setFilter('path-traversal')">path-traversal</button>
+        <button class="filter-btn" data-filter="os-injection" onclick="setFilter('os-injection')">os-injection</button>
+        <button class="filter-btn" data-filter="crlf" onclick="setFilter('crlf')">crlf</button>
+        <button class="filter-btn" data-filter="rate-limit" onclick="setFilter('rate-limit')">rate-limit</button>
+        <button class="filter-btn" data-filter="replay" onclick="setFilter('replay')">replay</button>
+        <button class="filter-btn" data-filter="large-payload" onclick="setFilter('large-payload')">large-payload</button>
+        <button class="filter-btn" data-filter="banned-ip" onclick="setFilter('banned-ip')">banned-ip</button>
+    </div>
+
+    <div class="grid">
+        <div class="box">
+            <div class="box-header">
+                <span class="box-title">blocked requests</span>
+                <span class="box-count" id="events-count">0</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ip</th><th>path</th><th>rule</th><th>when</th><th style="text-align:right">hits</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-body">
+                        <tr><td colspan="5" class="empty">no data yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="box-header">
+                <span class="box-title">active bans</span>
+                <span class="box-count" id="bans-count">0</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>ip</th><th>expires</th><th>violations</th><th></th></tr>
+                    </thead>
+                    <tbody id="bans-body">
+                        <tr><td colspan="4" class="empty">no active bans</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BASE = '/waf/admin';
+    let bannedIps = [];
+    let currentFilter = 'all';
+    let allGrouped = [];
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    function timeAgo(iso) {
+        const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+        if (diff < 60) return diff + 's ago';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        return Math.floor(diff / 3600) + 'h ago';
+    }
+
+    function formatTtl(s) {
+        if (s < 0) return '—';
+        return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    }
+
+    function getRuleKey(reason) {
+        if (!reason) return 'unknown';
+        const r = reason.toLowerCase();
+        if (r.includes('sql')) return 'sqli';
+        if (r.includes('xss')) return 'xss';
+        if (r.includes('crlf')) return 'crlf';
+        if (r.includes('path') || r.includes('traversal')) return 'path-traversal';
+        if (r.includes('command') || r.includes('os')) return 'os-injection';
+        if (r.includes('payload') || r.includes('large')) return 'large-payload';
+        if (r.includes('rate')) return 'rate-limit';
+        if (r.includes('replay')) return 'replay';
+        if (r.includes('ban')) return 'banned-ip';
+        return reason;
+    }
+
+    function tag(reason) {
+        const key = getRuleKey(reason);
+        const map = {
+            'sqli':           ['sqli',           'tag-red'],
+            'xss':            ['xss',            'tag-red'],
+            'crlf':           ['crlf',           'tag-purple'],
+            'path-traversal': ['path-traversal', 'tag-yellow'],
+            'os-injection':   ['os-injection',   'tag-yellow'],
+            'large-payload':  ['large-payload',  'tag-yellow'],
+            'rate-limit':     ['rate-limit',     'tag-blue'],
+            'replay':         ['replay',         'tag-blue'],
+            'banned-ip':      ['banned-ip',      'tag-muted'],
+            'unknown':        ['unknown',        'tag-red'],
+        };
+        const [label, cls] = map[key] || [key, 'tag-red'];
+        return `<span class="tag ${cls}">${label}</span>`;
+    }
+
+    function countBadge(n) {
+        if (n >= 10) return `<span class="count-badge hot">x${n}</span>`;
+        if (n >= 3)  return `<span class="count-badge warm">x${n}</span>`;
+        return `<span class="count-badge">${n}</span>`;
+    }
+
+    function updateThreat(activeBans, uniqueIps, grouped) {
+        const dangerousTypes = grouped.filter(e => {
+            const k = getRuleKey(e.reason);
+            return ['sqli','xss','os-injection','path-traversal','crlf'].includes(k);
+        }).length;
+
+        let level, color, segs, desc;
+        if (activeBans >= 3 || dangerousTypes >= 5) {
+            level = 'CRITICAL'; color = 'var(--red)'; segs = 4;
+            desc = `${activeBans} banned IP(s), ${dangerousTypes} active attack types detected`;
+        } else if (activeBans >= 1 || dangerousTypes >= 2) {
+            level = 'HIGH'; color = 'var(--yellow)'; segs = 3;
+            desc = `${uniqueIps} IP(s) attacking, ${dangerousTypes} distinct attack vectors`;
+        } else if (uniqueIps >= 1) {
+            level = 'MEDIUM'; color = 'var(--blue)'; segs = 2;
+            desc = `${uniqueIps} IP(s) detected in current window, monitoring`;
+        } else {
+            level = 'LOW'; color = 'var(--green)'; segs = 1;
+            desc = 'no significant threats in current window';
+        }
+
+        document.getElementById('threat-level-text').textContent = level;
+        document.getElementById('threat-level-text').style.color = color;
+        document.getElementById('threat-desc').textContent = desc;
+        document.getElementById('threat-banner').style.setProperty('--threat-color', color);
+
+        for (let i = 1; i <= 4; i++) {
+            const seg = document.getElementById('seg-' + i);
+            if (i <= segs) { seg.style.background = color; }
+            else { seg.style.background = ''; }
+        }
+
+        document.getElementById('threat-time').textContent =
+            'updated ' + new Date().toLocaleTimeString();
+    }
+
+    function setFilter(f) {
+        currentFilter = f;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.className = 'filter-btn' + (btn.dataset.filter === f ? ` active-${f}` : '');
+        });
+        renderEvents();
+    }
+
+    function clearFilter() { setFilter('all'); }
+
+    function renderEvents() {
+        const filtered = currentFilter === 'all'
+            ? allGrouped
+            : allGrouped.filter(e => getRuleKey(e.reason) === currentFilter);
+
+        document.getElementById('events-count').textContent = filtered.length;
+
+        if (filtered.length === 0) {
+            document.getElementById('events-body').innerHTML =
+                `<tr><td colspan="5" class="empty">no ${currentFilter === 'all' ? '' : currentFilter + ' '}events</td></tr>`;
+            return;
+        }
+
+        document.getElementById('events-body').innerHTML = filtered.slice(0, 50).map(e => `
+            <tr>
+                <td class="ip">${e.ip || '—'}</td>
+                <td class="path">${e.path || '—'}</td>
+                <td>${tag(e.reason)}</td>
+                <td class="when">${e.timestamp ? timeAgo(e.timestamp) : '—'}</td>
+                <td class="count">${countBadge(e.count)}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadEvents() {
+        try {
+            const res = await fetch(BASE + '/events');
+            const raw = await res.json();
+
+            if (!raw || raw.length === 0) {
+                allGrouped = [];
+                document.getElementById('total-blocked').textContent = '0';
+                document.getElementById('unique-ips').textContent = '0';
+                document.getElementById('last-attack').textContent = '—';
+                updateThreat(0, 0, []);
+                renderEvents();
+                return;
+            }
+
+            const events = raw.map(e => typeof e === 'string' ? JSON.parse(e) : e);
+            const uniqueIps = new Set(events.map(e => e.ip).filter(Boolean));
+            bannedIps = [...uniqueIps];
+            document.getElementById('unique-ips').textContent = uniqueIps.size;
+
+            if (events[0]?.timestamp) {
+                document.getElementById('last-attack').textContent = timeAgo(events[0].timestamp);
+            }
+
+            const grouped = {};
+            events.forEach(e => {
+                const key = `${e.ip}|${e.reason}|${e.path}`;
+                if (!grouped[key]) grouped[key] = { ...e, count: 1 };
+                else grouped[key].count++;
+            });
+
+            allGrouped = Object.values(grouped).sort((a, b) => b.count - a.count);
+            document.getElementById('total-blocked').textContent = allGrouped.length;
+            renderEvents();
+
+        } catch (err) {
+            document.getElementById('events-body').innerHTML =
+                '<tr><td colspan="5" class="empty">failed to load</td></tr>';
+        }
+    }
+
+    async function loadBans() {
+        try {
+            if (bannedIps.length === 0) {
+                document.getElementById('bans-body').innerHTML =
+                    '<tr><td colspan="4" class="empty">no active bans</td></tr>';
+                document.getElementById('active-bans').textContent = '0';
+                document.getElementById('bans-count').textContent = '0';
+                updateThreat(0, 0, allGrouped);
+                return;
+            }
+
+            const results = await Promise.all(
+                bannedIps.map(ip => fetch(BASE + '/ban/' + ip).then(r => r.json()))
+            );
+            const active = results.filter(r => r.banned);
+            document.getElementById('active-bans').textContent = active.length;
+            document.getElementById('bans-count').textContent = active.length;
+            updateThreat(active.length, bannedIps.length, allGrouped);
+
+            if (active.length === 0) {
+                document.getElementById('bans-body').innerHTML =
+                    '<tr><td colspan="4" class="empty">no active bans</td></tr>';
+                return;
+            }
+
+            document.getElementById('bans-body').innerHTML = active.map(b => `
+                <tr>
+                    <td class="ip">${b.ip}</td>
+                    <td class="ttl-text">${formatTtl(b.banTtlSeconds)}</td>
+                    <td class="when">${b.currentViolations}/5</td>
+                    <td><button class="unban" onclick="unban('${b.ip}')">unban</button></td>
+                </tr>
+            `).join('');
+
+        } catch (err) {
+            document.getElementById('bans-body').innerHTML =
+                '<tr><td colspan="4" class="empty">failed to load</td></tr>';
+        }
+    }
+
+    async function unban(ip) {
+        await fetch(BASE + '/ban/' + ip, { method: 'DELETE' });
+        bannedIps = bannedIps.filter(i => i !== ip);
+        loadBans();
+    }
+
+    async function refresh() {
+        await loadEvents();
+        await loadBans();
+    }
+
+    refresh();
+    setInterval(refresh, 3000);
+</script>
+</body>
+</html>
