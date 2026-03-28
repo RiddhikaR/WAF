@@ -68,6 +68,10 @@ waf:
 
 ![WAF Dashboard](dashboard.png)
 
+## Architecture Diagram
+
+![Architecture](waf-architecture.png)
+
 ## How It Works
 
 - Incoming requests are checked against active IP bans and the rate limit before the body is read — early rejection keeps overhead minimal
