@@ -64,6 +64,9 @@ waf:
 ```
 
 ---
+## Dashboard
+
+![WAF Dashboard](dashboard.png)
 
 ## How It Works
 
